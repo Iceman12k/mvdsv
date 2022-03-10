@@ -1004,7 +1004,7 @@ int SV_SimpleProjectileWriteFrame_Sproj(client_t *client, struct sizebuf_s *msg,
 
 			msg->allowoverflow = false;
 
-			if (msg->cursize + 2 <= maxsize)
+			if (msg->cursize + 7 <= maxsize)
 			{
 				// an update has been successfully written
 				client->csqcentitysendflags[number] = 0;
@@ -1237,7 +1237,7 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 
 			msg->allowoverflow = false;
 
-			if (msg->cursize + 2 <= maxsize)
+			if (msg->cursize + 4 <= maxsize)
 			{
 				// an update has been successfully written
 				client->csqcentitysendflags[number] = 0;
