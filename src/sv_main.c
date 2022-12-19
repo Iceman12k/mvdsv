@@ -685,6 +685,22 @@ static void SVC_LastScores (void)
 
 /*
 ===================
+SVC_LastStats
+===================
+*/
+void SV_LastStats_f (void);
+static void SVC_LastStats (void)
+{
+	if(!(int)sv_allowlastscores.value)
+		return;
+
+	SV_BeginRedirect (RD_PACKET);
+	SV_LastStats_f ();
+	SV_EndRedirect ();
+}
+
+/*
+===================
 SVC_DemoList
 SVC_DemoListRegex
 ===================
@@ -1897,6 +1913,8 @@ static void SV_ConnectionlessPacket (void)
 		SVC_GetChallenge ();
 	else if (!strcmp(c,"lastscores"))
 		SVC_LastScores ();
+	else if (!strcmp(c,"laststats"))
+		SVC_LastStats ();
 	else if (!strcmp(c,"dlist"))
 		SVC_DemoList ();
 	else if (!strcmp(c,"dlistr"))
@@ -3888,6 +3906,9 @@ void Host_Init (int argc, char **argv, int default_memsize)
 
 	Con_Printf ("%4.1f megabyte heap\n", (float)hunk_size / (1024 * 1024));
 	Con_Printf ("QuakeWorld Initialized\n");
+#ifndef	WWW_INTEGRATION
+	Con_Printf ("www authentication disabled (no curl support)\n");
+#endif
 
 	Cbuf_InsertText ("exec server.cfg\n");
 

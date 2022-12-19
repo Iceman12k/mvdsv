@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # Useful if you willing to stop on first error, also prints what is executed.
 #set -ex
 
-BUILDIR="${BUILDIR:-build}" # Default build dir.
+BUILDDIR="${BUILDDIR:-build}" # Default build dir.
 
 # Define target platforms, feel free to comment out if you does not require some of it,
 # or you can call this script with plaforms list you willing to build on the command line.
@@ -34,17 +34,20 @@ G="${G:-}"
 [ -z "${G}" ] && hash ninja >/dev/null 2>&1 && G="Ninja"
 [ ! -z "${G}" ] && export CMAKE_GENERATOR="${G}"
 
-rm -rf ${BUILDIR}
-mkdir -p ${BUILDIR}
+rm -rf ${BUILDDIR}
+mkdir -p ${BUILDDIR}
 
 # Build platforms one by one.
 for name in "${PLATFORMS[@]}"; do
-	P="${BUILDIR}/$name"
+	P="${BUILDDIR}/$name"
+	S="${PWD}"
 	mkdir -p "${P}"
 	case "${name}" in
 	* ) # Build native library.
-		cmake -B "${P}" -S . ${BUILD} -DCMAKE_TOOLCHAIN_FILE="tools/cross-cmake/${name}.cmake"
-		cmake --build "${P}" ${V}
+		pushd "${P}"
+		cmake ${BUILD} -DCMAKE_TOOLCHAIN_FILE="tools/cross-cmake/${name}.cmake" "${S}"
+		cmake --build . ${V}
+		popd
 	;;
 	esac
 done
