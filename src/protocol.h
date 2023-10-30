@@ -41,12 +41,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FTE_PEXT_256PACKETENTITIES	0x01000000	//Client can recieve 256 packet entities.
 #define FTE_PEXT_CHUNKEDDOWNLOADS	0x20000000	//alternate file download method. Hopefully it'll give quadroupled download speed, especially on higher pings.
 
-#define MVD_PEXT1_FLOATCOORDS       0x00000001 // FTE_PEXT_FLOATCOORDS but for entity/player coords only
-#define MVD_PEXT1_HIGHLAGTELEPORT   0x00000002 // Adjust movement direction for frames following teleport
-#define MVD_PEXT1_SERVERSIDEWEAPON  0x00000004 // Server-side weapon selection
-#define	MVD_PEXT1_WEAPONPREDICTION	0x00000080 // Weapon prediction
-#define	MVD_PEXT1_SIMPLEPROJECTILE	0x00000100 // Simple projectiles
-
 //===============================================
 
 #define	PORT_CLIENT	27001
@@ -100,8 +94,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MVD_PEXT1_DEBUG_ANTILAG     (1 << 4) // Send predicted positions to server (compare to antilagged positions)
 #define MVD_PEXT1_HIDDEN_MESSAGES   (1 << 5) // dem_multiple(0) packets are in format (<length> <type-id>+ <packet-data>)*
 #define MVD_PEXT1_SERVERSIDEWEAPON2 (1 << 6) // Server-side weapon selection supports clc_mvd_weapon_full_impulse
-#define	MVD_PEXT1_WEAPONPREDICTION	(1 << 7) // Weapon prediction
-#define	MVD_PEXT1_SIMPLEPROJECTILE	(1 << 8) // Simple projectiles
+//#define	MVD_PEXT1_WEAPONPREDICTION	(1 << 7) // Weapon prediction
+//#define	MVD_PEXT1_SIMPLEPROJECTILE	(1 << 8) // Simple projectiles
+#ifdef FTE_PEXT_CSQC
+#define	MVD_PEXT1_EZCSQC			(1 << 7) // pseudo-CSQC, with hardcoded behaviors that can be utilized by gamecode
+#endif
 
 #if defined(MVD_PEXT1_DEBUG_ANTILAG) || defined(MVD_PEXT1_DEBUG_WEAPON)
 #define MVD_PEXT1_DEBUG

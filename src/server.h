@@ -103,6 +103,8 @@ typedef struct
 	int         max_edicts;         // might not MAX_EDICTS if mod allocates memory
 #ifdef MVD_PEXT1_SIMPLEPROJECTILE
 	sprojectile_state_t simple_projectiles[MAX_EDICTS];
+#endif
+#if defined(MVD_PEXT1_SIMPLEPROJECTILE) || defined(FTE_PEXT_CSQC)
 	unsigned short	csqcsendstates[MAX_EDICTS];
 	unsigned int	csqcchecksum;
 #endif
@@ -191,7 +193,7 @@ typedef struct
 #endif
 
 
-#ifdef MVD_PEXT1_SIMPLEPROJECTILE
+#if defined(MVD_PEXT1_SIMPLEPROJECTILE) || defined(FTE_PEXT_CSQC)
 // code adapted from Darkplaces
 #define SCOPE_WANTREMOVE 1        // Set if a remove has been scheduled.
 #define SCOPE_WANTUPDATE 2        // Set if an update has been scheduled.
@@ -957,6 +959,10 @@ void SV_KickClient(client_t* client, const char* reason);
 //
 void SV_WriteEntitiesToClient (client_t *client, sizebuf_t *msg, qbool recorder);
 void SV_SetVisibleEntitiesForBot (client_t* client);
+#ifdef FTE_PEXT_CSQC
+int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, sizebuf_t *msg, int maxsize, int entlist_size, const unsigned short *entlist);
+void EntityFrameCSQC_LostFrame(client_t *client, int framenum);
+#endif
 
 //
 // sv_nchan.c

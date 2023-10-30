@@ -3062,8 +3062,9 @@ void SV_EnableClientsCSQC(void)
 {
 	size_t e;
 
+	
 	sv_client->csqcactive = true;
-
+	
 	//if the csqc has just restarted, its probably going to want us to resend all csqc ents from scratch because of all the setup it might do.
 	for (e = 1; e < MAX_EDICTS; e++)
 		if (sv_client->csqcentityscope[e] & SCOPE_WANTSEND)
@@ -3510,7 +3511,7 @@ void SV_PreRunCmd(void)
 
 
 
-#ifdef MVD_PEXT1_SIMPLEPROJECTILE
+#if defined(MVD_PEXT1_SIMPLEPROJECTILE) || (FTE_PEXT_CSQC)
 /*
 ===========
 CSQC Stuff, for now just SimpleProjectiles
@@ -3538,9 +3539,6 @@ static void SV_FrameAck(int framenum)
 			d->packetlog[i].packetnumber = 0;
 	*/
 }
-
-
-
 #endif
 
 
@@ -4515,13 +4513,15 @@ void SV_ExecuteClientMessage (client_t *cl)
 
 
 #if defined(MVD_PEXT1_SIMPLEPROJECTILE) || defined(FTE_PEXT_CSQC)
-	for (i = sv_client->csqc_latestverified + 1; i < cl->netchan.incoming_acknowledged; i++)
+	///*
+	for (i = cl->csqc_latestverified + 1; i < cl->netchan.incoming_acknowledged; i++)
 	{
 		if (!SV_FrameLost(i))
 			break;
 	}
+	//*/
 	SV_FrameAck(cl->netchan.incoming_acknowledged);
-	sv_client->csqc_latestverified = cl->netchan.incoming_acknowledged;
+	cl->csqc_latestverified = cl->netchan.incoming_acknowledged;
 #endif
 
 
@@ -4726,26 +4726,6 @@ void SV_ExecuteClientMessage (client_t *cl)
 #ifdef FTE_PEXT2_VOICECHAT
 		case clc_voicechat:
 			SV_VoiceReadPacket();
-			break;
-#endif
-
-#ifdef MVD_PEXT1_SIMPLEPROJECTILE
-		case clc_ackframe:
-			num = MSG_ReadLong();
-
-
-			/*
-			for (i = sv_client->csqc_latestverified + 1; i < num; i++)
-			{
-				if (!SV_FrameLost(i))
-					break;
-			}
-			SV_FrameAck(num);
-			sv_client->csqc_latestverified = num;
-			//*/
-
-			
-
 			break;
 #endif
 		}

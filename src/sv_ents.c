@@ -613,12 +613,14 @@ static void SV_WritePlayersToClient (client_t *client, client_frame_t *frame, by
 				pflags |= PF_WEAPONFRAME;
 		}
 
+#ifdef MVD_PEXT1_WEAPONPREDICTION
 		int send_wepprediction = false;
 		if (client->mvdprotocolextensions1 & MVD_PEXT1_WEAPONPREDICTION && ent == self_ent)
 		{
 			send_wepprediction = true;
 			pflags |= PF_WEAPONFRAME;
 		}
+#endif
 
 		// Z_EXT_PM_TYPE protocol extension
 		// encode pm_type and jump_held into pm_code
@@ -859,8 +861,7 @@ int SV_SimpleProjectileWriteFrame_Sproj(client_t *client, struct sizebuf_s *msg,
 	int sectionstarted = false;
 
 	maxsize -= 24;
-
-
+	
 	if (msg->cursize + 32 >= maxsize)
 		return false;
 
@@ -1097,7 +1098,7 @@ int SV_PrepareEntity_Sproj(edict_t *ent, entity_state_t *cs, int enumber)
 
 #ifdef FTE_PEXT_CSQC
 sizebuf_t *csqcmsgbuffer;
-int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, int maxsize, int entlist_size, const unsigned short *entlist)
+int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, sizebuf_t *msg, int maxsize, int entlist_size, const unsigned short *entlist)
 {
 	int num, number, end, sendflags;
 	const unsigned short *entnum;
@@ -1109,13 +1110,10 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 	if (client->csqcentityframe_lastreset < 0)
 		client->csqcentityframe_lastreset = client->csqc_framenum;
 	
-
 	csqcmsgbuffer = msg;
 	int sectionstarted = false;
 
 	maxsize -= 24;
-
-
 	if (msg->cursize + 32 >= maxsize)
 		return false;
 
@@ -1203,8 +1201,12 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 
 			// An update.
 			sendflags = client->csqcentitysendflags[number];
-			// Nothing to send? FINE.
 
+			// If it's a new entity, always assume sendflags 0xFFFFFF.
+			if (!(client->csqcentityscope[number] & SCOPE_ASSUMED_EXISTING))
+				sendflags = 0xFFFFFF;
+
+			// Nothing to send? FINE.
 			if (!sendflags)
 				continue;
 
@@ -1216,12 +1218,6 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 				sectionstarted = 1;
 			}
 
-			// If it's a new entity, always assume sendflags 0xFFFFFF.
-			if (!(client->csqcentityscope[number] & SCOPE_ASSUMED_EXISTING))
-				sendflags = 0xFFFFFF;
-
-
-
 			MSG_WriteShort(msg, (unsigned short)number);
 			msg->allowoverflow = true;
 
@@ -1230,7 +1226,7 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 				msg->cursize = oldcursize;
 				sectionstarted = oldsectionstarted;
 
-				client->csqcentitysendflags[number] = 0;
+				//client->csqcentitysendflags[number] = 0;
 				msg->allowoverflow = false;
 				continue;
 			}
@@ -1240,10 +1236,10 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 			if (msg->cursize + 4 <= maxsize)
 			{
 				// an update has been successfully written
-				client->csqcentitysendflags[number] = 0;
 				//db->entno[db->num] = number;
 				//db->sendflags[db->num] = sendflags;
-				//db->num += 1;
+				//db->num += 1;csqcsendstates
+				client->csqcentitysendflags[number] = 0;
 				client->csqcentityscope[number] &= ~SCOPE_WANTSEND;
 				client->csqcentityscope[number] |= SCOPE_EXISTED_ONCE | SCOPE_ASSUMED_EXISTING;
 				db->entno[db->num] = number;
@@ -1255,8 +1251,6 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 				continue;
 			}
 
-
-
 			// update was too big for this packet - rollback the buffer to its
 			// state before the writes occurred, we'll try again next frame
 			msg->cursize = oldcursize;
@@ -1264,20 +1258,17 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 		}
 	}
 
-
-	if (!sectionstarted)
-	{
-		sectionstarted = 1;
-		MSG_WriteByte(msg, svc_fte_csqcentities);
-		//MSG_WriteLong(msg, client->csqc_framenum);
-	}
-
 	if (sectionstarted)
 	{
 		// write index 0 to end the update (0 is never used by real entities)
 		MSG_WriteShort(msg, 0);
 	}
-
+	else
+	{
+		sectionstarted = 1;
+		MSG_WriteByte(msg, svc_fte_csqcentities);
+		//MSG_WriteLong(msg, client->csqc_framenum);
+	}
 
 	if (db->num == 0)
 		EntityFrameCSQC_DeallocFrame(client, client->csqc_framenum);
@@ -1287,10 +1278,6 @@ int SV_SimpleProjectileWriteFrame_CSQC(client_t *client, struct sizebuf_s *msg, 
 
 int SV_PrepareEntity_CSQC(edict_t *ent, entity_state_t *cs, int enumber)
 {
-	//unsigned int sendentity;
-	unsigned int sendflags;
-	int i;
-
 	if (ent->xv->SendEntity == 0)
 		return false;
 
@@ -1517,7 +1504,7 @@ void SV_WriteEntitiesToClient (client_t *client, sizebuf_t *msg, qbool recorder)
 	// put other visible entities into either a packet_entities or a nails message
 	pack = &frame->entities;
 	pack->num_entities = 0;
-	#ifdef MVD_PEXT1_SIMPLEPROJECTILE
+	#if defined(MVD_PEXT1_SIMPLEPROJECTILE) || defined(FTE_PEXT_CSQC)
 	numcsqcsendstates = 0;
 	#endif
 
@@ -1548,7 +1535,7 @@ void SV_WriteEntitiesToClient (client_t *client, sizebuf_t *msg, qbool recorder)
 				continue;
 			}
 
-			#if MVD_PEXT1_SIMPLEPROJECTILE
+			#ifdef MVD_PEXT1_SIMPLEPROJECTILE
 			if (client->mvdprotocolextensions1 & MVD_PEXT1_SIMPLEPROJECTILE && !recorder)
 			{
 				if (SV_PrepareEntity_Sproj(ent, state, e))
@@ -1562,12 +1549,14 @@ void SV_WriteEntitiesToClient (client_t *client, sizebuf_t *msg, qbool recorder)
 			else
 			#endif
 			#ifdef FTE_PEXT_CSQC
-			if (client->csqcactive && !recorder)
-			{
-				if (SV_PrepareEntity_CSQC(ent, state, e))
+			if (clent && client->netchan.incoming_sequence > 5) {
+				if (client->csqcactive && !recorder)
 				{
-					sv.csqcsendstates[numcsqcsendstates++] = e;
-					continue;
+					if (SV_PrepareEntity_CSQC(ent, state, e))
+					{
+						sv.csqcsendstates[numcsqcsendstates++] = e;
+						continue;
+					}
 				}
 			}
 			#endif
@@ -1634,14 +1623,15 @@ void SV_WriteEntitiesToClient (client_t *client, sizebuf_t *msg, qbool recorder)
 
 	// encode the packet entities as a delta from the
 	// last packetentities acknowledged by the client
-
 	SV_EmitPacketEntities (client, pack, msg);
-	
+
+	// now add the specialized nail update
+	SV_EmitNailUpdate (msg, recorder);
 
 #ifdef MVD_PEXT1_SIMPLEPROJECTILE
 	if (client->mvdprotocolextensions1 & MVD_PEXT1_SIMPLEPROJECTILE && !recorder)
 	{
-		SV_SimpleProjectileWriteFrame_Sproj(client, msg, msg->maxsize, numcsqcsendstates, sv.csqcsendstates);
+		SV_SimpleProjectileWriteFrame_Sproj(client, msg, msg->maxsize - (client->netchan.message.cursize + 24), numcsqcsendstates, sv.csqcsendstates);
 	}
 #endif
 #if defined(MVD_PEXT1_SIMPLEPROJECTILE) && defined(FTE_PEXT_CSQC)
@@ -1650,12 +1640,9 @@ void SV_WriteEntitiesToClient (client_t *client, sizebuf_t *msg, qbool recorder)
 #ifdef FTE_PEXT_CSQC
 	if (client->csqcactive && !recorder)
 	{
-		SV_SimpleProjectileWriteFrame_CSQC(client, msg, msg->maxsize, numcsqcsendstates, sv.csqcsendstates);
+		SV_SimpleProjectileWriteFrame_CSQC(client, msg, msg->maxsize - (client->netchan.message.cursize + 30), numcsqcsendstates, sv.csqcsendstates);
 	}
 #endif
-
-	// now add the specialized nail update
-	SV_EmitNailUpdate (msg, recorder);
 
 	// Translate NQ progs' EF_MUZZLEFLASH to svc_muzzleflash
 	if (pr_nqprogs)

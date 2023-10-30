@@ -89,5 +89,6 @@ void 		PR2_InitProg(void);
 #define PR_InitProg PR2_InitProg
 void        PR2_ClearEdict(edict_t* e);
 #define PR_ClearEdict PR2_ClearEdict
+qbool		PR2_SendEntity(edict_t* e, edict_t* to, int sendflags);
 
 #endif /* !__PR2_H__ */

@@ -485,7 +485,15 @@ Writes all update values to a sizebuf
 void SV_FullClientUpdate (client_t *client, sizebuf_t *buf)
 {
 	char info[MAX_EXT_INFO_STRING];
-	int i;
+	int i, e;
+
+	// Reki: resend all CSQC ents, for reasons. previously the initial CSQC ent states were being dropped for some delta reasons I think.
+	if (client->csqcactive)
+	{
+		for (e = 1; e < MAX_EDICTS; e++)
+			if (client->csqcentityscope[e] & SCOPE_WANTSEND)
+				client->csqcentitysendflags[e] = 0xFFFFFF;
+	}
 
 	i = client - svs.clients;
 
@@ -3591,6 +3599,9 @@ void SV_InitLocal (void)
 #endif
 #ifdef MVD_PEXT1_SERVERSIDEWEAPON2
 	svs.mvdprotocolextension1 |= MVD_PEXT1_SERVERSIDEWEAPON2;
+#endif
+#ifdef MVD_PEXT1_EZCSQC
+	svs.mvdprotocolextension1 |= MVD_PEXT1_EZCSQC;
 #endif
 
 	Info_SetValueForStarKey (svs.info, "*version", SERVER_NAME " " SERVER_VERSION, MAX_SERVERINFO_STRING);

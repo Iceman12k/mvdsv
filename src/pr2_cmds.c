@@ -1579,6 +1579,21 @@ void PF2_infokey(int e1, char *key, char *valbuff, int sizebuff)
 			snprintf(ov, sizeof(ov), "%d", cl->file_percent ? cl->file_percent : -1); //bliP: file percent
 		else if (!strcmp(key, "ping"))
 			snprintf(ov, sizeof(ov), "%d", (int)SV_CalcPing(cl));
+#ifdef FTE_PEXT_CSQC
+		else if (!strcmp(key, "csqcactive"))
+#ifdef MVD_PEXT1_EZCSQC
+		{
+			if (cl->fteprotocolextensions & FTE_PEXT_CSQC)
+				snprintf(ov, sizeof(ov), "%d", (int)cl->csqcactive);
+			else
+				snprintf(ov, sizeof(ov), "%d", (int)0);
+		}
+		else if (!strcmp(key, "ezcsqc") && cl->mvdprotocolextensions1 & MVD_PEXT1_EZCSQC)
+			snprintf(ov, sizeof(ov), "%d", (int)cl->csqcactive);
+#else
+			snprintf(ov, sizeof(ov), "%d", (int)cl->csqcactive);
+#endif
+#endif
 		else if (!strcmp(key, "*userid"))
 			snprintf(ov, sizeof(ov), "%d", cl->userid);
 		else if (!strncmp(key, "login", 6))
@@ -2040,7 +2055,28 @@ intptr_t PF2_SetSendNeeded(intptr_t *args)
 }
 #endif
 
+intptr_t PF2_GetModelIndex(intptr_t *args)
+{
+	int i;
+	char **check;
 
+	for (i = 0, check = sv.model_precache; *check; i++, check++)
+		if (!strcmp(*check, args[1]))
+			break;
+
+	return i;
+}
+
+intptr_t PF2_GetSoundIndex(intptr_t *args)
+{
+	int sound_num;
+
+	for (sound_num = 1; sound_num < MAX_SOUNDS && sv.sound_precache[sound_num]; sound_num++)
+		if (!strcmp(args[1], sv.sound_precache[sound_num]))
+			break;
+
+	return sound_num;
+}
 
 typedef intptr_t(*traps_t)(intptr_t *args);
 traps_t extended_traps[512];
@@ -2056,6 +2092,8 @@ struct
 #ifdef FTE_PEXT_CSQC
 	{"setsendneeded",		PF2_SetSendNeeded},
 #endif
+	{"getmodelindex",		PF2_GetModelIndex},
+	{"getsoundindex",		PF2_GetSoundIndex},
 	{NULL, NULL}
 };
 

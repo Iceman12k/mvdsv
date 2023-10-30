@@ -1186,7 +1186,9 @@ void SV_SendClientMessages (void)
 		}
 
 		if (c->state == cs_spawned)
-			SV_SendClientDatagram (c, i);
+		{
+			SV_SendClientDatagram(c, i);
+		}
 		else {
 			Netchan_Transmit (&c->netchan, c->datagram.cursize, c->datagram.data);	// just update reliable
 			c->datagram.cursize = 0;
